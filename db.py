@@ -15,7 +15,8 @@ def get_db_connection():
             port=os.getenv('DB_PORT'),
             dbname=os.getenv('NAME'), # postgres
             user=os.getenv('USER'),
-            password=os.getenv('PASS')
+            password=os.getenv('PASS'),
+            sslmode='require'
         )
         return conn
     except OperationalError as e:
