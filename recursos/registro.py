@@ -11,7 +11,7 @@ from flask_cors import cross_origin
 ROLES = { "Administrador" : 1 , "Suscriptor" : 2 }
 
 class Registro(Resource):
-    def get(self):
+    def post(self):
         """Registra un nuevo usuario en la base de datos."""
         payload = request.get_json()
 
@@ -59,7 +59,7 @@ class Registro(Resource):
         
 class Login(Resource):
 
-    def get(self):
+    def post(self):
         """Devuelve código de éxito o error, y si el usuario existe devuelve su rol"""
 
         data = request.get_json()
