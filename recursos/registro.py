@@ -6,6 +6,7 @@ from flask_restful import Resource, reqparse, abort
 from psycopg2 import OperationalError, Error as Psycopg2Error
 from db import get_db_connection
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_cors import cross_origin
 
 ROLES = { "Administrador" : 1 , "Suscriptor" : 2 }
 
@@ -16,7 +17,7 @@ parser_post_registro.add_argument('codigo_postal', type=int, required=False)
 parser_post_registro.add_argument('pass', type=str, required=True, help="El campo 'pass' es requerido para completar el registro")
 
 class Registro(Resource):
-
+    @cross_origin(origins="https://mrmenaya.upv.edu.es")
     def post(self):
         """Registra un nuevo usuario en la base de datos."""
         payload = parser_post_registro.parse_args()

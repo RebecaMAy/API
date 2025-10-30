@@ -3,9 +3,14 @@
 from flask import Flask, jsonify
 from flask_restful import Api
 from recursos.registro import Registro, Login
-
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["https://mrmenaya.upv.edu.es"]
+    }
+})
 api = Api(app)
 
 @app.route('/activar_render')
