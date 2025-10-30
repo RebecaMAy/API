@@ -19,9 +19,9 @@ class Registro(Resource):
         if not payload:
             return {"ok": False, "error": "No se proporcionaron datos JSON."}, 400
 
-        correo = payload.get('correo')
+        correo = payload.get('email')
         nombre = payload.get('nombre')
-        password_plano = payload.get('pass')
+        password_plano = payload.get('password')
         id_rol_defecto = ROLES["Suscriptor"] 
 
         # --- Punto de seguridad crítico ---
