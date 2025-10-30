@@ -27,9 +27,9 @@ class Registro(Resource):
         password_hash = generate_password_hash(password_plano)
 
         query = """
-            INSERT INTO usuarios (Id_Rol, nombre, email, password_hash)
+            INSERT INTO "usuarios" ("Id_Rol", "nombre", "email", "password_hash")
             VALUES (%s, %s, %s, %s)
-            RETURNING id_usuario;
+            RETURNING "id_usuario";
         """
         
         conn = None
@@ -74,10 +74,10 @@ class Login(Resource):
         if not contraseña:
             return {"ok": False, "error": "Faltan 'password' en el cuerpo JSON."}, 400
 
-        query = """ SELECT u.password_hash, r.nombre AS rol_nombre
-            FROM  usuarios u
-            JOIN  roles r ON u.Id_Rol = r.id_rol
-            WHERE u.email = %s;
+        query = """ SELECT u."password_hash", r.nombre AS rol_nombre
+            FROM  "usuarios" u
+            JOIN  roles r ON u."Id_Rol" = r.id_rol
+            WHERE u."email" = %s;
         """
 
         conn = None 
