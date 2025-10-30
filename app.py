@@ -6,11 +6,8 @@ from recursos.registro import Registro, Login
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": ["https://mrmenaya.upv.edu.es"]
-    }
-})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
 api = Api(app)
 
 @app.route('/activar_render')
