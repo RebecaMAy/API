@@ -10,21 +10,18 @@ from flask_cors import cross_origin
 
 ROLES = { "Administrador" : 1 , "Suscriptor" : 2 }
 
-parser_post_registro = reqparse.RequestParser()
-parser_post_registro.add_argument('correo', type=str, required=True, help="El campo 'correo' es requerido para completar el registro")
-parser_post_registro.add_argument('nombre', type=str, required=True, help="El campo 'nombre' es requerido para completar el registro")
-parser_post_registro.add_argument('codigo_postal', type=int, required=False) 
-parser_post_registro.add_argument('pass', type=str, required=True, help="El campo 'pass' es requerido para completar el registro")
-
 class Registro(Resource):
     @cross_origin(origins="https://mrmenaya.upv.edu.es")
     def post(self):
         """Registra un nuevo usuario en la base de datos."""
-        payload = parser_post_registro.parse_args()
+        payload = request.get_json()
 
-        correo = payload['correo']
-        nombre = payload['nombre']
-        password_plano = payload['pass']
+        if not payload:
+            return {"ok": False, "error": "No se proporcionaron datos JSON."}, 400
+
+        correo = payload.get('correo')
+        nombre = payload.get('nombre')
+        password_plano = payload.get('pass')
         id_rol_defecto = ROLES["Suscriptor"] 
 
         # --- Punto de seguridad crítico ---
@@ -74,7 +71,7 @@ class Login(Resource):
         contraseña = data.get('password')
 
         if not correo:
-            return {"ok": False, "error": "Falta 'email' en el cuerpo JSON."}, 40
+            return {"ok": False, "error": "Falta 'email' en el cuerpo JSON."}, 400
         if not contraseña:
             return {"ok": False, "error": "Faltan 'password' en el cuerpo JSON."}, 400
 
