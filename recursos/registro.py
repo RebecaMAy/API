@@ -11,7 +11,7 @@ from flask_cors import cross_origin
 ROLES = { "Administrador" : 1 , "Suscriptor" : 2 }
 
 class Registro(Resource):
-    def post(self):
+    def get(self):
         """Registra un nuevo usuario en la base de datos."""
         payload = request.get_json()
 
