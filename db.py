@@ -3,7 +3,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-from recursos.lib.Globales import PATH_CRED_RENDER
+PATH_CRED_RENDER = "/etc/secrets/serviceAccountKey.json"
 
 # Evitamos inicializar la app más de una vez si el script se recarga
 if not firebase_admin._apps:
