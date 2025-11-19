@@ -1,24 +1,22 @@
-# db.py
-
+#LIBRERIAS
 import os
-import psycopg2
-from psycopg2 import OperationalError
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-def get_db_connection():
-    """
-    Establece y devuelve una conexión a la base de datos PostgreSQL.
-    Lanza una excepción OperationalError si la conexión falla.
-    """
-    try:
-        conn = psycopg2.connect(
-            host=os.getenv('HOST'), # ip google cloud
-            port=os.getenv('DB_PORT'),
-            dbname=os.getenv('NAME'), # postgres
-            user=os.getenv('USER'),
-            password=os.getenv('PASS'),
-            sslmode='require'
-        )
-        return conn
-    except OperationalError as e:
-        print(f"ERROR: No se pudo conectar a la base de datos. {e}")
-        raise e
+from recursos.lib.Globales import PATH_CRED_RENDER
+
+# Evitamos inicializar la app más de una vez si el script se recarga
+if not firebase_admin._apps:
+
+    if os.path.exists(PATH_CRED_RENDER):
+        # Estamos en Render: Usamos el archivo secreto
+        cred = credentials.Certificate(PATH_CRED_RENDER)
+    else:
+            raise Exception(
+                "No se encontraron credenciales de Firebase. "
+                "Asegúrate de tener 'serviceAccountKey.json' en los files secretos de Render."
+            )
+    
+    firebase_admin.initialize_app(cred)
+
+db = firestore.client()

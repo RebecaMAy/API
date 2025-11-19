@@ -17,11 +17,8 @@ def activar():
     """
     return jsonify({'status': 'ok', 'message': 'Application is running.'})
 
-# Ruta para la lista de mediciones (GET, POST)
 api.add_resource(Login, '/login')
-
-# Rutas para obtener la última o las 'n' últimas mediciones
 api.add_resource(Registro, '/register')
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()

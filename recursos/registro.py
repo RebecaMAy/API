@@ -1,115 +1,137 @@
-# recursos/registro.py
-
-import json
-from flask import request
-from flask_restful import Resource, reqparse, abort
-from psycopg2 import OperationalError, Error as Psycopg2Error
-from db import get_db_connection
+from flask import request, jsonify
+from flask_restful import Resource, abort
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_cors import cross_origin
+from firebase_admin import firestore
+import datetime
+import secrets
+import string
 
-ROLES = { "Administrador" : 1 , "Suscriptor" : 2 }
+from db import db
+
+# Asumimos que importas 'db' desde tu configuración de conexión
+# from app import db 
+# Si no lo tienes separado, db = firestore.client()
 
 class Registro(Resource):
     def post(self):
-        """Registra un nuevo usuario en la base de datos."""
+        """Registra un nuevo usuario usando una transacción de Firestore."""
         payload = request.get_json()
 
         if not payload:
             return {"ok": False, "error": "No se proporcionaron datos JSON."}, 400
 
+        # Extracción de datos
         correo = payload.get('email')
         nombre = payload.get('nombre')
         password_plano = payload.get('password')
-        id_rol_defecto = ROLES["Suscriptor"] 
+        codigo_postal = payload.get('codigo_postal') # Necesario para la colección usuarios_suscriptores
 
-        # --- Punto de seguridad crítico ---
+        # Validación básica
+        if not all([correo, nombre, password_plano, codigo_postal]):
+            return {"ok": False, "error": "Faltan campos obligatorios (email, nombre, password, codigo_postal)"}, 400
+
+        # Referencias a los documentos (El ID es el correo)
+        # NOTA: Asume que 'db' es tu cliente de firestore inicializado
+        # db = firestore.client() 
+        
+        user_ref = db.collection('usuarios').document(correo)
+        sub_ref = db.collection('usuarios_suscriptores').document(correo)
+
+        # Preparar datos
         password_hash = generate_password_hash(password_plano)
+        token_aleatorio = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+        validez_token = datetime.datetime.now() + datetime.timedelta(days=1)
 
-        query = """
-            INSERT INTO "usuarios" ("Id_Rol", "nombre", "email", "password_hash")
-            VALUES (%s, %s, %s, %s)
-            RETURNING "id_usuario";
-        """
-        
-        conn = None
+        # Datos para colección 'usuarios'
+        user_data = {
+            "contraseña": password_hash,
+            "estado_token": 0,     # 0: No verificado
+            "rol": 1,              # 1: Suscriptor por defecto
+            "token": token_aleatorio,
+            "validez": validez_token
+        }
+
+        #mas adelante tiene mas sentido que se cree esta referencia una vez ha iniciado sesion por primera vez, es decir cuando verifica correo
+        # Datos para colección 'usuarios_suscriptores'
+        sub_data = {
+            "nombre": nombre,
+            "codigo_postal": codigo_postal
+        }
+
+        # --- TRANSACCIÓN ---
         try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(query, (id_rol_defecto, nombre, correo, password_hash))
-            new_user_id = cur.fetchone()[0]
-            conn.commit()
-            return {"ok": True, "message": "Usuario registrado con éxito", "id_usuario": new_user_id}, 201
+            transaction = db.transaction()
+            # Llamamos a la función transaccional
+            resultado = crear_usuario_transactional(transaction, user_ref, sub_ref, user_data, sub_data)
+            
+            if resultado:
+                return {"ok": True, "message": "Usuario registrado con éxito"}, 201
+            else:
+                return {"ok": False, "error": "El correo electrónico ya está en uso."}, 409
 
-        except Psycopg2Error as e:
-            if conn: conn.rollback()
-            # TODO Manejar violación de constraint 'UNIQUE' (email repetido)
-            if e.pgcode == '23505': 
-                return {"ok": False, "error": "El correo electrónico ya está en uso."}, 409 # 409 Conflict
-            # Otro error de base de datos
-            abort(500, message=f"Error de base de datos al registrar: {e}")
-        except OperationalError:
-            abort(503, message="Servicio no disponible: no se pudo conectar a la base de datos.")
         except Exception as e:
-            if conn: conn.rollback()
-            abort(500, message=f"Error interno del servidor: {e}")
-        finally:
-            if conn: conn.close()
+            return {"ok": False, "error": f"Error interno del servidor: {str(e)}"}, 500
 
-        
+
+# Definición de la función transaccional fuera de la clase (o como método estático)
+@firestore.transactional
+def crear_usuario_transactional(transaction, user_ref, sub_ref, user_data, sub_data):
+    """
+    Verifica si el usuario existe y, si no, crea los documentos en ambas colecciones.
+    """
+    snapshot = user_ref.get(transaction=transaction)
+    
+    if snapshot.exists:
+        return False  # El usuario ya existe, abortamos
+    
+    # Si no existe, procedemos a escribir en ambas colecciones atómicamente
+    transaction.set(user_ref, user_data)
+    transaction.set(sub_ref, sub_data)
+    return True
+
+
 class Login(Resource):
-
     def post(self):
-        """Devuelve código de éxito o error, y si el usuario existe devuelve su rol"""
-
+        """Valida credenciales contra la colección 'usuarios' de Firestore."""
         data = request.get_json()
+        
         if not data:
             return {"ok": False, "error": "No se proporcionaron datos JSON."}, 400
         
         correo = data.get('email')
         contraseña = data.get('password')
 
-        if not correo:
-            return {"ok": False, "error": "Falta 'email' en el cuerpo JSON."}, 400
-        if not contraseña:
-            return {"ok": False, "error": "Faltan 'password' en el cuerpo JSON."}, 400
+        if not correo or not contraseña:
+            return {"ok": False, "error": "Faltan email o password."}, 400
 
-        query = """ SELECT u."password_hash", r.nombre AS rol_nombre
-            FROM  "usuarios" u
-            JOIN  roles r ON u."Id_Rol" = r.id_rol
-            WHERE u."email" = %s;
-        """
+        try:
+            # Buscar el documento por ID (email)
+            user_ref = db.collection('usuarios').document(correo)
+            doc = user_ref.get()
 
-        conn = None 
-        try: 
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(query, (correo,))
-            user_data = cur.fetchone()
-
-            if user_data is None:
-                # Usuario no encontrado
-                # Damos un mensaje genérico por seguridad
+            if not doc.exists:
                 return {"ok": False, "error": "Correo no registrado"}, 401
             
-            stored_hash = user_data[0]
-            rol = user_data[1]
+            user_data = doc.to_dict()
+            stored_hash = user_data.get('contraseña')
+            rol = user_data.get('rol')
 
+            # Verificar contraseña
             if check_password_hash(stored_hash, contraseña):
-                # Contraseña correcta: Éxito
-                # Respondemos como espera el frontend
-                return {"ok": True, "rol": rol, "email": correo}, 200
-            else:
-                # Contraseña incorrecta
-                return {"ok": False, "error": "Contraseña incorrecta"}, 401 # 401 Unauthorized
+                # Verificar si la cuenta está activa/verificada si es un requisito
+                if user_data.get('estado_token') == 0:
+                    return {"ok": False, "error": "Cuenta no verificada"}, 403
 
-        except OperationalError:
-            abort(503, message="Servicio no disponible: no se pudo conectar a la base de datos.")
-        except Psycopg2Error as e:
-            abort(500, message=f"Error de base de datos al consultar: {e}")
+                return {
+                    "ok": True, 
+                    "rol": rol, 
+                    "email": correo,
+                    # "token": ... aquí podrías generar un JWT si usas eso para la sesión
+                }, 200
+            else:
+                return {"ok": False, "error": "Contraseña incorrecta"}, 401
+
         except Exception as e:
-            abort(500, message=f"Error interno del servidor: {e}")
-        finally:
-            if conn: conn.close()
+            return {"ok": False, "error": f"Error al intentar iniciar sesión: {str(e)}"}, 500
 
     
