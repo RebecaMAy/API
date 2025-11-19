@@ -65,7 +65,7 @@ class Registro(Resource):
             resultado = crear_usuario_transactional(transaction, user_ref, sub_ref, user_data, sub_data)
             
             if resultado:
-                return {"ok": True, "message": "Usuario registrado con éxito"}, 201
+                return {"ok": True, "message": "Usuario registrado con éxito", "token": token_aleatorio}, 201
             else:
                 return {"ok": False, "error": "El correo electrónico ya está en uso."}, 409
 
