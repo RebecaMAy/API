@@ -6,7 +6,7 @@ from flask import render_template
 #LLAMADA A BBDDD
 from recursos.lib.ConexionBBDD import db
 
-from recursos.lib.Globales import URL_PHP_BASE, LOGO_URL
+from recursos.lib.Globales import URL_PHP_BASE, LOGO_URL, RESEND_API_KEY
 from recursos.lib.Mensajes import asunto_verificacion, remitente
 
 """
@@ -59,6 +59,7 @@ Recibe: Email y token
 Devuelve: Respuesta del envio
 -----------------------------------------
 """
+resend.api_key = RESEND_API_KEY
 def enviar_correo_verificacion(email_destino, token):
    
     # 1. Generar Link
