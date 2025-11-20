@@ -1,7 +1,6 @@
-
 Flask
-Flask-RESTful
-
+flask-restful
+flask-cors
+resend
 gunicorn
-Flask-Cors
 firebase-admin
