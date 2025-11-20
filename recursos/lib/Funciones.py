@@ -72,13 +72,17 @@ def enviar_correo_verificacion(email_destino, token):
     link_final = f"{URL_PHP_BASE}/verificar_usuario.php?p1={p1_hash}&p2={p2_hash}"
     
     # 2. COMPLETAR HTML
-    html_content = render_template(
-        'verificacion.html', # RUTA NEWLETTERS: templates/...
-        link_verificacion=link_final,
-        logo_url=LOGO_URL
-    )
+    try:
+        html_content = render_template(
+            'verificacion.html', # RUTA NEWLETTERS: templates/...
+            link_verificacion=link_final,
+            logo_url=LOGO_URL
+        )
+    except Exception as e:
+        print(f"Error renderizando template: {e}")
+        raise e
 
-    # 3. Enviar con SMTP (Sustituye a Resend)
+    # 3. Enviar con SMTP ROBUSTO (Sustituye a Resend)
     
     # Crear el objeto del mensaje
     msg = MIMEMultipart()
@@ -90,22 +94,31 @@ def enviar_correo_verificacion(email_destino, token):
     msg.attach(MIMEText(html_content, 'html'))
 
     try:
-        # Conexión al servidor
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        server.starttls() # Encriptar conexión
+        print(f"Iniciando conexión SMTP a {SMTP_HOST}:{SMTP_PORT}...")
+
+        # --- CORRECCIÓN CRÍTICA PARA RENDER ---
+        # 1. Convertimos el puerto a entero (SMTP_PORT viene como string de variables de entorno)
+        # 2. Añadimos timeout=15 para evitar que el worker se congele infinitamente
+        server = smtplib.SMTP(SMTP_HOST, int(SMTP_PORT), timeout=15)
+        
+        # 3. Protocolo EHLO/STARTTLS para Brevo/Outlook
+        server.ehlo()       # Saludo inicial
+        server.starttls()   # Encriptar conexión
+        server.ehlo()       # Saludo de nuevo tras encriptar
         
         # Login con las credenciales reales
         server.login(SMTP_USER, SMTP_PASSWORD)
         
         # Enviar correo
-        # Nota: SMTP_USER se usa aquí como el remitente técnico (envelope sender)
         server.sendmail(SMTP_USER, email_destino, msg.as_string())
         
         server.quit()
         
+        print(f"✅ Correo enviado correctamente a {email_destino}")
         # Retornamos un diccionario similar a lo que devolvía Resend para mantener coherencia
         return {"id": "smtp_sent", "message": "Enviado correctamente"}
 
     except Exception as e:
+        print(f"❌ ERROR CRÍTICO SMTP: {str(e)}")
         # Si falla, lanzamos la excepción para que el recurso principal (Resource) la capture con su try/except
         raise e

@@ -15,7 +15,7 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 NOMBRE_CRED_DOC = 'serviceAccountKey.json'
 PATH_CRED_RENDER = f"/etc/secrets/{NOMBRE_CRED_DOC}"
 
-SMTP_HOST = 'smtp.gmail.com'
-SMTP_PORT = '587'
-SMTP_USER = 'u0308421204@gmail.com'
-SMTP_PASSWORD = 'dcnhjlqmcbpkutrs'
+SMTP_HOST = 'smtp-relay.brevo.com'
+SMTP_PORT = '2525'
+SMTP_USER = 'rebemendrb@gmail.com'
+SMTP_PASSWORD = os.environ.get("API_KEY_BREVO")
