@@ -9,6 +9,7 @@ from flask_cors import CORS
 from recursos.CorreoVerificacion import EnviarVerificacion
 from recursos.CorreoRecuperacion import EnviarRecuperacion
 from recursos.registro import Registro, Login
+from recursos.Usuario import Usuario
 
 app = Flask(__name__)
 # Permitir peticiones desde cualquier origen ***IMPORTANTE para funcionar desde PLESK
@@ -47,6 +48,7 @@ api.add_resource(EnviarRecuperacion, '/email/recuperacion')
 
 api.add_resource(Login, '/login')
 api.add_resource(Registro, '/register')
+api.add_resource(Usuario, '/usuario')
 
 if __name__ == '__main__':
     # debug=True solo para desarrollo local

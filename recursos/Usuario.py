@@ -6,7 +6,12 @@ from recursos.lib.ConexionBBDD import db
 
 
 class Usuario(Resource):
-    def get(self, email):
+    def get(self):
+        data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return {"status": "error", "message": "Email requerido"}, 400
         """Devuelve los datos del usuario sin procesar"""
         doc_ref = db.collection('usuarios').document(email)
         doc = doc_ref.get()
@@ -27,9 +32,14 @@ class Usuario(Resource):
 
         return {'status': 'success', 'data': data}, 200
 
-    def put(self, email):
+    def put(self):
         """Actualiza campos específicos del usuario"""
         data = request.get_json()
+        email = data.get("email")
+
+        if not email:
+            return {"status": "error", "message": "Email requerido"}, 400
+            
         doc_ref = db.collection('usuarios').document(email)
         
         update_data = {}
