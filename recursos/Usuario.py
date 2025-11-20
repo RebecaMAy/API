@@ -6,7 +6,7 @@ from recursos.lib.ConexionBBDD import db
 
 
 class Usuario(Resource):
-    def get(self):
+    def post(self):
         data = request.get_json()
         email = data.get("email")
 
