@@ -1,12 +1,17 @@
-#LIBRERIAS
+# LIBRERIAS
 import base64
-import resend
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from flask import render_template
 
-#LLAMADA A BBDDD
+# LLAMADA A BBDDD
 from recursos.lib.ConexionBBDD import db
 
-from recursos.lib.Globales import URL_PHP_BASE, LOGO_URL, RESEND_API_KEY
+# LLAMADA A GLOBALES (Sustituimos RESEND_API_KEY por las variables SMTP)
+from recursos.lib.Globales import URL_PHP_BASE, LOGO_URL
+from recursos.lib.Globales import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
+
 from recursos.lib.Mensajes import asunto_verificacion, remitente
 
 """
@@ -40,7 +45,7 @@ def validacion_token(datos_usuario, token):
 
 """
 -----------------------------------------
-str -> validacion_token() -> str
+str -> codificar_parametro() -> str
 -----------------------------------------
 Recibe: Dato sin hashear
 -----------------------------------------
@@ -52,35 +57,55 @@ def codificar_parametro(valor):
 
 """
 -----------------------------------------
-str, str -> validacion_token() -> str OR Exception
+str, str -> enviar_correo_verificacion() -> dict OR Exception
 -----------------------------------------
 Recibe: Email y token
 -----------------------------------------
-Devuelve: Respuesta del envio
+Devuelve: Respuesta del envio (Simulada como objeto dict)
 -----------------------------------------
 """
-resend.api_key = RESEND_API_KEY
 def enviar_correo_verificacion(email_destino, token):
-   
+    
     # 1. Generar Link
     p1_hash = codificar_parametro(email_destino)
     p2_hash = codificar_parametro(token)
     link_final = f"{URL_PHP_BASE}/verificar_usuario.php?p1={p1_hash}&p2={p2_hash}"
     
-    #COMPLETAR HTML
+    # 2. COMPLETAR HTML
     html_content = render_template(
-        'verificacion.html', #RUTA NEWLETTERS: templates/...
+        'verificacion.html', # RUTA NEWLETTERS: templates/...
         link_verificacion=link_final,
         logo_url=LOGO_URL
     )
 
-    # 3. Enviar con Resend
-    params = {
-        "from": remitente,
-        "to": email_destino,
-        "subject": asunto_verificacion,
-        "html": html_content,
-    }
+    # 3. Enviar con SMTP (Sustituye a Resend)
+    
+    # Crear el objeto del mensaje
+    msg = MIMEMultipart()
+    msg['From'] = remitente     # Nombre visible (ej: "Tu App <no-reply@...>")
+    msg['To'] = email_destino
+    msg['Subject'] = asunto_verificacion
 
-    r = resend.Emails.send(params)
-    return r
+    # Adjuntar el cuerpo HTML
+    msg.attach(MIMEText(html_content, 'html'))
+
+    try:
+        # Conexión al servidor
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls() # Encriptar conexión
+        
+        # Login con las credenciales reales
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        
+        # Enviar correo
+        # Nota: SMTP_USER se usa aquí como el remitente técnico (envelope sender)
+        server.sendmail(SMTP_USER, email_destino, msg.as_string())
+        
+        server.quit()
+        
+        # Retornamos un diccionario similar a lo que devolvía Resend para mantener coherencia
+        return {"id": "smtp_sent", "message": "Enviado correctamente"}
+
+    except Exception as e:
+        # Si falla, lanzamos la excepción para que el recurso principal (Resource) la capture con su try/except
+        raise e

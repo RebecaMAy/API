@@ -14,3 +14,8 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 # RUTA JSON con credenciales de Firebase Firestore
 NOMBRE_CRED_DOC = 'serviceAccountKey.json'
 PATH_CRED_RENDER = f"/etc/secrets/{NOMBRE_CRED_DOC}"
+
+SMTP_HOST = 'smtp.gmail.com'
+SMTP_PORT = '587'
+SMTP_USER = 'u0308421204@gmail.com'
+SMTP_PASSWORD = 'dcnhjlqmcbpkutrs'
