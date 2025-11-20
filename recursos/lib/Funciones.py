@@ -6,8 +6,8 @@ from flask import render_template
 #LLAMADA A BBDDD
 from recursos.lib.ConexionBBDD import db
 
-from Globales import URL_PHP_BASE, LOGO_URL
-from Mensajes import asunto_verificacion, remitente
+from recursos.lib.Globales import URL_PHP_BASE, LOGO_URL
+from recursos.lib.Mensajes import asunto_verificacion, remitente
 
 """
 -----------------------------------------
