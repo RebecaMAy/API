@@ -7,6 +7,6 @@ mensaje_error_correo = "El correo proporcionado no está registrado."
 mensaje_error_token = "El token proporcionado no coincide con el registro."
 
 #CONTENIDO CORREO
-remitente = "Breathe Tracking <onboarding@resend.dev>"
+remitente = "Breathe Tracking <u0308421204@gmail.com>"
 asunto_verificacion = "Verifica tu cuenta - Breathe Tracking"
 asunto_recuperacion = "Recuperación de Acceso - Breathe Tracking"
